@@ -364,6 +364,9 @@ class TinyGsmSim7000SSL
    * MQTT functions
    */
 
+  bool mqtt_connected;
+  bool mqtt_hex;
+
   bool mqttSetBrokerImpl(String host, uint16_t port) {
     sendAT(GF("+SMCONF=\"URL\",\""), host, GF("\",\""), port, GF("\""));
     int ret = waitResponse();
@@ -383,19 +386,25 @@ class TinyGsmSim7000SSL
   }
 
   bool mqttConnectImpl() {
+    sendAT(GF("+SMPUBHEX=1"));
+    int ok = waitResponse();
+    mqtt_hex = (ok == 1);
+
+    sendAT(GF("+SMCONF=\"SMSUBHEX\",\"1\""));  //Valid only for SIM7070/80/90
+    int ok2 = waitResponse();
+
     sendAT(GF("+SMCONN"));
     int ret = waitResponse(60000);
-    connected = (ret == 1);
-    return connected;
+    mqtt_connected = (ret == 1);
+    return mqtt_connected;
   }
 
   void mqttDisconnectImpl() {
     sendAT(GF("+SMDISC"));
     waitResponse();
-    connected = false;
+    mqtt_connected = false;
   }
 
-  bool connected;
   bool mqttIsConnectedImpl() {
     //return connected;
     bool ret = false;
@@ -408,7 +417,7 @@ class TinyGsmSim7000SSL
       ret = (status == 1);
       waitResponse(); //OK
     }
-    connected = ret;
+    mqtt_connected = ret;
     return ret;
   }
 
@@ -419,7 +428,13 @@ class TinyGsmSim7000SSL
     sendAT(GF("+SMPUB=\""), topic, "\",\"", plength, "\",", qos, ",", retain);
     if (waitResponse(GF(">")) != 1) { return false; }
 
-    stream.write(payload, plength);
+    if (mqtt_hex) {
+      for (int i = 0; i < plength; i++) {
+        stream.printf("%02X", payload[i]);
+      }
+    } else {
+      stream.write(payload, plength);
+    }
     stream.flush();
 
     // after posting data, module responds with:
