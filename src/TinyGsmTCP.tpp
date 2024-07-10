@@ -152,7 +152,7 @@ class TinyGsmTCP {
         if (millis() - prev_check > 500) {
           // setting got_data to true will tell maintain to run
           // modemGetAvailable(mux)
-          got_data   = true;
+          got_data   = sock_connected;
           prev_check = millis();
         }
         at->maintain();
@@ -227,7 +227,7 @@ class TinyGsmTCP {
         if (millis() - prev_check > 500) {
           // setting got_data to true will tell maintain to run
           // modemGetAvailable()
-          got_data   = true;
+          got_data   = sock_connected;
           prev_check = millis();
         }
         // TODO(vshymanskyy): Read directly into user buffer?
